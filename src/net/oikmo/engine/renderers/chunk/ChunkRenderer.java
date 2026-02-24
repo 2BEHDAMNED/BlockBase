@@ -25,10 +25,14 @@ public class ChunkRenderer {
 		shader.stop();
 	}
 	
-	public void render(Map<TexturedModel, List<ChunkEntity>> chunkEntities, Camera camera) {
+	public void render(List<ChunkEntity> chunkEntities, Camera camera) {
 		synchronized(chunkEntities) {
 
-			for(TexturedModel model : chunkEntities.keySet()) {
+			for(ChunkEntity entity : chunkEntities) {
+				TexturedModel model = entity.getModel();
+				if(model.getRawModel() == null) {
+					continue;
+				}
 				shader.start();
 				shader.loadViewMatrix(camera);
 				GL30.glBindVertexArray(model.getRawModel().getVaoID());
@@ -38,19 +42,11 @@ public class ChunkRenderer {
 				GL13.glActiveTexture(GL13.GL_TEXTURE0);
 				GL11.glBindTexture(GL11.GL_TEXTURE_2D, model.getTexture().getTextureID());
 				
-				List<ChunkEntity> batch = chunkEntities.get(model);
+				Vector3f position = new Vector3f(entity.getPosition().x, 0, entity.getPosition().z);
 				
-				for(int i = 0; i < batch.size(); i++) {
-					
-					ChunkEntity chunk = batch.get(i);
-					
-					Vector3f position = new Vector3f(chunk.getPosition().x, 0, chunk.getPosition().z);
-					
-					Matrix4f transformationMatrix = Maths.createTransformationMatrix(position, new Vector3f(0,0,0), 1);
-					shader.loadTransformationMatrix(transformationMatrix);
-					GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, model.getRawModel().getVertexCount());
-					
-				}
+				Matrix4f transformationMatrix = Maths.createTransformationMatrix(position, new Vector3f(0,0,0), 1);
+				shader.loadTransformationMatrix(transformationMatrix);
+				GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, model.getRawModel().getVertexCount());
 				
 				GL20.glDisableVertexAttribArray(0);
 				GL20.glDisableVertexAttribArray(1);

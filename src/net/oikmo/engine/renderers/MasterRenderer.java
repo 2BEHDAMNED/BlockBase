@@ -61,7 +61,7 @@ public class MasterRenderer {
 	public static int invisibleTexture;
 	
 	private Map<TexturedModel, List<Entity>> entities = new HashMap<TexturedModel, List<Entity>>();
-	private Map<TexturedModel, List<ChunkEntity>> chunkEntities = new HashMap<TexturedModel, List<ChunkEntity>>();
+	private List<ChunkEntity> chunkEntities = new ArrayList<ChunkEntity>();
 	
 	public MasterRenderer() {
 		createProjectionMatrix();
@@ -228,17 +228,7 @@ public class MasterRenderer {
 			return;
 		}
 		
-		List<ChunkEntity> batch = chunkEntities.get(model);
-		
-		if(batch != null) {
-			if(!batch.contains(entity)) {
-				batch.add(entity);
-			}
-		} else {
-			List<ChunkEntity> newBatch = new ArrayList<>();
-			newBatch.add(entity);
-			chunkEntities.put(model, newBatch);
-		}
+		chunkEntities.add(entity);
 	}
 	
 	public void createProjectionMatrix() {

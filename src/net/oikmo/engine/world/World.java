@@ -241,8 +241,6 @@ public class World {
 													currentMasterChunks.add(master);
 												}
 											}
-										} else {
-											System.out.println("im nulling it");
 										}
 									}	
 								}
@@ -282,7 +280,9 @@ public class World {
 							}
 						}
 					}
-				} catch(Exception e) {}
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
 			} else {
 				try {
 					for(int m = 0; m < chunkMap.values().size(); m++) {
@@ -300,18 +300,21 @@ public class World {
 							}
 						}
 					}
-				} catch(Exception e) {}
+				} catch(Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		
 		try {
 		for(MasterChunk master : currentMasterChunks) {
 			if(master.dirty) {
-				System.out.println(master.getEntity().getModel());
-				if(master.getMesh() != null && master.getEntity().getModel() == null) {
-					RawModel raw = Loader.loadToVAO(master.getMesh().positions, master.getMesh().uvs, master.getMesh().normals);
-					TexturedModel texModel = new TexturedModel(raw, MasterRenderer.currentTexturePack);
-					master.getEntity().setModel(texModel);
+				if(master.getEntity().getModel() == null) {
+					master.getEntity().setModel(new TexturedModel(null, MasterRenderer.currentTexturePack));
+				}
+				//System.out.println(master.getEntity().getModel());
+				if(master.getMesh() != null) {
+					master.getEntity().getModel().setRawModel(Loader.loadToVAO(master.getMesh().positions, master.getMesh().uvs, master.getMesh().normals));
 					master.dirty = false;
 				}
 				

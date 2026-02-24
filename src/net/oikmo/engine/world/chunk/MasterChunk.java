@@ -24,7 +24,7 @@ public class MasterChunk {
 	private ChunkMesh mesh;
 	private ChunkEntity entity;
 	public static final int networkMaxTime = 60*(5);
-	public static final int localMaxTime = 60*(30);
+	public static final int localMaxTime = 60*(5);
 	public int timer = networkMaxTime;
 	
 	public boolean dirty = true;
