@@ -80,7 +80,7 @@ public class GuiDisconnected extends GuiScreen {
 		
 
 		drawTiledBackground(ResourceLoader.loadUITexture("dirtTex"), 48);
-		drawShadowStringCentered(Display.getWidth()/2, (Display.getHeight()/2), (!kick ? Main.lang.translateKey("network.quit.d") : Main.lang.translateKey("network.quit.k") + message));
+		drawShadowStringCentered(Display.getWidth()/2, (Display.getHeight()/2), (!kick ? Main.lang.translateKey("network.quit.d")+ message : Main.lang.translateKey("network.quit.k") + message));
 		quitButton.tick(lockTick);
 	}
 	

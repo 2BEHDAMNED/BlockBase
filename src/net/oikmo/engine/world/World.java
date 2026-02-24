@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -24,15 +25,12 @@ import net.oikmo.engine.entity.Camera;
 import net.oikmo.engine.entity.Entity;
 import net.oikmo.engine.entity.ItemEntity;
 import net.oikmo.engine.entity.Player;
-import net.oikmo.engine.models.RawModel;
 import net.oikmo.engine.models.TexturedModel;
 import net.oikmo.engine.nbt.NBTTagCompound;
 import net.oikmo.engine.network.packet.PacketRequestChunk;
 import net.oikmo.engine.renderers.MasterRenderer;
-import net.oikmo.engine.renderers.chunk.ChunkEntity;
 import net.oikmo.engine.sound.SoundMaster;
 import net.oikmo.engine.world.blocks.Block;
-import net.oikmo.engine.world.chunk.Chunk;
 import net.oikmo.engine.world.chunk.ChunkLoader;
 import net.oikmo.engine.world.chunk.MasterChunk;
 import net.oikmo.engine.world.chunk.coordinate.ChunkCoordHelper;
@@ -264,17 +262,18 @@ public class World {
 		if(!chunkMap.isEmpty()) {		
 			if(Main.theNetwork != null) {
 				try {
-					for(int m = 0; m < chunkMap.values().size(); m++) {
-						MasterChunk master = (MasterChunk) chunkMap.values().toArray()[m];
-	
+					Iterator<MasterChunk> iter = chunkMap.values().iterator();
+					
+					while(iter.hasNext()) {
+						MasterChunk master = iter.next();
+						
 						if(master != null) {
-							if(!isInValidRange(2, master.getOrigin())) {
+							if(!isInValidRange(master.getOrigin())) {
 								if(master.timer > 0) {
 									master.timer--;
 								}
 								if(master.timer <= 0) {
-									System.out.println("BYE BITCH AT " + master.getOrigin());
-									chunkMap.remove(master.getOrigin());
+									iter.remove();
 									hasAsked.remove(master.getOrigin());
 								}
 							}
@@ -285,9 +284,12 @@ public class World {
 				}
 			} else {
 				try {
-					for(int m = 0; m < chunkMap.values().size(); m++) {
-						MasterChunk master = (MasterChunk) chunkMap.values().toArray()[m];
-	
+					
+					Iterator<MasterChunk> iter = chunkMap.values().iterator();
+					
+					while(iter.hasNext()) {
+						MasterChunk master = iter.next();
+						
 						if(master != null) {
 							if(!isInValidRange(master.getOrigin())) {
 								if(master.timer > 0) {
@@ -295,14 +297,12 @@ public class World {
 								}
 								if(master.timer <= 0) {
 									provider.saveChunk(master);
-									chunkMap.remove(master.getOrigin());
+									iter.remove();
 								}
 							}
 						}
 					}
-				} catch(Exception e) {
-					e.printStackTrace();
-				}
+				} catch(Exception e) {}
 			}
 		}
 		

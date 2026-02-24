@@ -59,14 +59,20 @@ public class PlayerClientListener extends Listener {
 
 		if(object instanceof LoginResponse){
 			LoginResponse response = (LoginResponse) object;
-			if(response.getResponseText().equalsIgnoreCase("ok")){
+			System.out.println(response.getResponseText());
+			if(response.getResponseText().contentEquals("ok")){
 				Logger.log(LogLevel.INFO,"Login Ok");
 			} else {
 				System.out.println(response.PROTOCOL + " " + NetworkHandler.NETWORK_PROTOCOL);
 				if(response.PROTOCOL != NetworkHandler.NETWORK_PROTOCOL) {
 					Main.disconnect(false, Main.lang.translateKey("network.disconnect.p").replace("%s", ""+response.PROTOCOL));
 				} else {
-					Main.disconnect(false, Main.lang.translateKey("network.disconnect.l"));
+					if(response.getResponseText().contentEquals("not ok!")) {
+						Main.disconnect(false, Main.lang.translateKey("network.disconnect.l"));
+					} else {
+						Main.disconnect(false, response.getResponseText());
+					}
+					
 				}
 
 				Logger.log(LogLevel.WARN,"Login failed");

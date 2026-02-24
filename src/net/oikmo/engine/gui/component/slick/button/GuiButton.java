@@ -36,7 +36,7 @@ public class GuiButton extends Gui implements GuiComponent {
 				normalTexture.clampTexture();
 			}
 		} catch(Exception e) {
-			
+			e.printStackTrace();
 		}
 		
 	}
@@ -63,6 +63,7 @@ public class GuiButton extends Gui implements GuiComponent {
 	}
 	
 	public GuiButton(Image normalTexture, Image hoveredTexture, float x, float y, float width, float height, String text) {
+		onInit();
 		this.normalTexture = normalTexture;
 		this.hoveredTexture = hoveredTexture;
 		this.normalTexture.setFilter(Image.FILTER_NEAREST);

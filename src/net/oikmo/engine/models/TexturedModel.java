@@ -1,5 +1,6 @@
 package net.oikmo.engine.models;
 
+import net.oikmo.engine.Loader;
 import net.oikmo.engine.textures.ModelTexture;
 
 public class TexturedModel {
@@ -26,6 +27,11 @@ public class TexturedModel {
 	}
 
 	public void setRawModel(RawModel model) {
+		if(this.model != null && this.model != model) {
+			this.model.cleanUp();
+			
+		}
+		
 		this.model = model;
 	}
 }

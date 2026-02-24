@@ -60,17 +60,17 @@ public class Loader {
 	 */
 	public static RawModel loadToVAO(float[] positions, int dimensions) {
 		int vaoID = createVAO();
-		storeDataInAttributeList(positions, 0, dimensions);
+		int vboID = storeDataInAttributeList(positions, 0, dimensions);
 		unbindVAO();
-		return new RawModel(vaoID, positions.length / dimensions);
+		return new RawModel(vaoID, new int[] { vboID }, positions.length / dimensions);
 	}
 	
 	public static RawModel loadToVAO(float[] vertices,  float[] uv) { 
 		int vaoID = createVAO();
-		storeDataInAttributeList(vertices, 0, 3);
-		storeDataInAttributeList(uv, 1, 2);
+		int verticesVBO = storeDataInAttributeList(vertices, 0, 3);
+		int uvsVBO = storeDataInAttributeList(uv, 1, 2);
 		unbindVAO();
-		return new RawModel(vaoID, vertices.length); 
+		return new RawModel(vaoID, new int[] { verticesVBO, uvsVBO }, vertices.length); 
 	}
 	
 	public static int loadQuadToVAO(float[] positions, float[] textureCoords) {
@@ -83,20 +83,22 @@ public class Loader {
 	
 	public static RawModel loadToVAO(float[] positions, float[] textureCoords, float[] normals) {
 		int vaoID = createVAO();
-		storeDataInAttributeList(positions, 0, 3);
-		storeDataInAttributeList(textureCoords, 1, 2);
-		storeDataInAttributeList(normals, 2, 3);
+		int positionsVBO = storeDataInAttributeList(positions, 0, 3);
+		int uvsVBO = storeDataInAttributeList(textureCoords, 1, 2);
+		int normalsVBO = storeDataInAttributeList(normals, 2, 3);
 		unbindVAO();
-		return new RawModel(vaoID, positions.length);
+		return new RawModel(vaoID, new int[] { positionsVBO, uvsVBO, normalsVBO }, positions.length);
 	}
 	
 	public static RawModel loadToVAO(int[] positions, float[] textureCoords, int[] normals) {
 		int vaoID = createVAO();
-		storeDataInAttributeList(positions, 0, 1);
-		storeDataInAttributeList(textureCoords, 1, 2);
-		storeDataInAttributeList(normals, 2, 1);
+		
+		int positionsVBO = storeDataInAttributeList(positions, 0, 1);
+		int uvsVBO       = storeDataInAttributeList(textureCoords, 1, 2);
+		int normalsVBO   = storeDataInAttributeList(normals, 2, 1);
+		
 		unbindVAO();
-		return new RawModel(vaoID, positions.length);
+		return new RawModel(vaoID, new int[] { positionsVBO, uvsVBO, normalsVBO }, positions.length);
 	}
 
 	public static int loadCubeMap(String[] textureFiles) {
@@ -140,7 +142,7 @@ public class Loader {
 		GL30.glBindVertexArray(0);
 	}
 
-	private static void storeDataInAttributeList(float[] data, int attributeNumber, int dimensions) {
+	private static int storeDataInAttributeList(float[] data, int attributeNumber, int dimensions) {
 		int vboID = GL15.glGenBuffers();
 		vbos.add(vboID);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
@@ -148,9 +150,10 @@ public class Loader {
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, buffer, GL15.GL_STATIC_DRAW);
 		GL20.glVertexAttribPointer(attributeNumber, dimensions, GL11.GL_FLOAT, false, 0, 0);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+		return vboID;
 	}
 	
-	private static void storeDataInAttributeList(int[] data, int attributeNumber, int dimensions) {
+	private static int storeDataInAttributeList(int[] data, int attributeNumber, int dimensions) {
 		int vboID = GL15.glGenBuffers();
 		vbos.add(vboID);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, vboID);
@@ -158,6 +161,8 @@ public class Loader {
 		GL15.glBufferData(GL15.GL_ARRAY_BUFFER, buffer, GL15.GL_STATIC_DRAW);
 		GL30.glVertexAttribIPointer(attributeNumber, dimensions, GL11.GL_INT, 0, 0);
 		GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, 0);
+		
+		return vboID;
 	}
 	
 	private static IntBuffer storeDataInIntBuffer(int[] data) {
@@ -322,6 +327,20 @@ public class Loader {
 		textures.add(textureID);
 		//Return the texture ID so we can bind it later again
 		return textureID;
+	}
+	
+	public static void cleanUpVAO(int vaoID) {
+		if(vaos.indexOf(vaoID) != -1) {
+			vaos.remove(vaos.indexOf(vaoID));
+			GL30.glDeleteVertexArrays(vaoID);
+		}
+	}
+	
+	public static void cleanUpVBO(int vboID) {
+		if(vbos.indexOf(vboID) != -1) {
+			vbos.remove(vbos.indexOf(vboID));
+			GL15.glDeleteBuffers(vboID);
+		}
 	}
 
 	/**
