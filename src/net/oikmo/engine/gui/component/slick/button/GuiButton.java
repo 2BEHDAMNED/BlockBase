@@ -26,18 +26,27 @@ public class GuiButton extends Gui implements GuiComponent {
 	private boolean isHovering = false;
 
 	private void onInit() {
-		try {
-			if(normalTexture == null) {
-				normalTexture = Gui.guiAtlas.getSubImage(0, 66, 200, 20);
+		
+		if(normalTexture == null) {
+			normalTexture = Gui.guiAtlas.getSubImage(0, 66, 200, 20);
+			
+			try {
 				normalTexture.clampTexture();
+			} catch(Exception e) {
+				e.printStackTrace();
 			}
-			if(hoveredTexture == null) {
-				hoveredTexture = Gui.guiAtlas.getSubImage(0, 86, 200, 20);
-				normalTexture.clampTexture();
-			}
-		} catch(Exception e) {
-			e.printStackTrace();
+			
 		}
+		if(hoveredTexture == null) {
+			hoveredTexture = Gui.guiAtlas.getSubImage(0, 86, 200, 20);
+			try {
+				hoveredTexture.clampTexture();
+			} catch(Exception e) {
+				e.printStackTrace();
+			}
+			
+		}
+		
 		
 	}
 
