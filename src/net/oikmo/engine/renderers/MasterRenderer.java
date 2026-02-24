@@ -224,6 +224,10 @@ public class MasterRenderer {
 	public void addChunkEntity(ChunkEntity entity) {
 		TexturedModel model = entity.getModel();
 		
+		if(model == null) {
+			return;
+		}
+		
 		List<ChunkEntity> batch = chunkEntities.get(model);
 		
 		if(batch != null) {

@@ -64,7 +64,6 @@ public class GuiCreateWorld extends GuiScreen {
 				}
 				
 				Main.loadWorld(world, seed, superflat);
-				Main.shouldTick();
 				Gui.cleanUp();
 				Main.currentScreen = null;
 			}

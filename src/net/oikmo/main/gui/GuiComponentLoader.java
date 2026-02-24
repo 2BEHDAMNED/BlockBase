@@ -400,7 +400,7 @@ public class GuiComponentLoader extends GuiScreen {
 
 	private void download(String urlStr, File file) throws IOException {
 		Download d = new Download(new URL(urlStr), file);
-		System.out.println(d.getUrl());
+		//System.out.println(d.getUrl());
 		steps = 100;
 		while(d.getProgress() < 100f) {
 			step = (int)d.getProgress();

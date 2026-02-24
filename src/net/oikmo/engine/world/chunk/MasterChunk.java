@@ -27,16 +27,18 @@ public class MasterChunk {
 	public static final int localMaxTime = 60*(30);
 	public int timer = networkMaxTime;
 	
-	public boolean dirty = true;
+	public boolean dirtys = true;
 	
 	public MasterChunk(OpenSimplexNoise noiseGen, ChunkCoordinates origin) {
 		this.origin = origin;
 		this.chunk = new Chunk(noiseGen, origin);
+		this.entity = new ChunkEntity(null, origin);
 	}
 	
 	public MasterChunk(ChunkCoordinates origin, byte[] blocks) {
 		this.origin = origin;
 		this.chunk = new Chunk(blocks, origin);
+		this.entity = new ChunkEntity(null, origin);
 	}
 	
 	public Block getBlock(Vector3f position) {
@@ -210,8 +212,10 @@ public class MasterChunk {
 	}
 	
 	public void replaceBlocks(byte[] blocks) {
+		this.dirty = true;
 		this.chunk = new Chunk(blocks, origin);
 		this.mesh = new ChunkMesh(chunk);
+		System.out.println("REPLACE");
 		this.entity = null;
 	}
 	
@@ -233,6 +237,9 @@ public class MasterChunk {
 	
 	public void createMesh() {
 		this.mesh = new ChunkMesh(this.chunk);
+		if(this.getEntity().getModel() == null) {
+			
+		}
 	}
 	
 	public ChunkEntity getEntity() {

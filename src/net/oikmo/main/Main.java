@@ -41,6 +41,7 @@ import net.oikmo.main.gui.GuiComponentLoader;
 import net.oikmo.main.gui.GuiConnecting;
 import net.oikmo.main.gui.GuiDisconnected;
 import net.oikmo.main.gui.GuiInGame;
+import net.oikmo.main.gui.GuiLoading;
 import net.oikmo.main.gui.GuiMainMenu;
 import net.oikmo.toolbox.Logger;
 import net.oikmo.toolbox.Logger.LogLevel;
@@ -300,7 +301,7 @@ public class Main {
 							SoundMaster.setListener(thePlayer.getCamera(), timer.renderPartialTicks);
 						}
 					}
-					theWorld.update(thePlayer.getCamera());
+					theWorld.update();
 				}
 				
 				if(inGameGUI != null) {				
@@ -381,6 +382,8 @@ public class Main {
 		SoundMaster.stopMusic();
 
 		inGameGUI = new GuiInGame();
+		
+		currentScreen = new GuiLoading();
 		
 		if(seed != null) {
 			theWorld = new World(seed);

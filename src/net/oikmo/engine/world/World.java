@@ -95,7 +95,6 @@ public class World {
 	}
 
 	public void initLevelLoader(String world) {
-		System.out.println("Hello!");
 		GuiMainMenu.stopMusic();
 		SoundMaster.stopMusic();
 
@@ -211,6 +210,7 @@ public class World {
 						for (int x = -RENDER_SIZE; x < RENDER_SIZE; x++) {
 							for (int z = -RENDER_SIZE; z < RENDER_SIZE; z++) {
 								if(FastMath.abs(x) + FastMath.abs(z) > RENDER_SIZE) continue;
+								if(Main.thePlayer == null) { continue; }
 								if(Main.thePlayer.getCurrentChunkPosition() != null) {
 									ChunkCoordinates playerChunk = Main.thePlayer.getCurrentChunkPosition();
 									ChunkCoordinates chunkPos = ChunkCoordHelper.create((int)(playerChunk.x + (x*16)), (int)(playerChunk.z + (z*16)));
@@ -253,11 +253,12 @@ public class World {
 		});
 	}
 
-	public void update(Camera camera) {
-		if(this.currentCamera == null) {
-			this.currentCamera = camera;
+	public void update() {
+		if(Main.thePlayer != null && this.currentCamera == null) {
+			this.currentCamera = Main.thePlayer.getCamera();
+		} else {
+			return;
 		}
-		
 		if(!chunkMap.isEmpty()) {		
 			if(Main.theNetwork != null) {
 				try {
@@ -301,24 +302,16 @@ public class World {
 
 		synchronized(currentMasterChunks) {
 			for(MasterChunk master : currentMasterChunks) {
+				if((master.getMesh() != null && master.dirty) || (master.getMesh() != null && master.getEntity().getModel() == null)) {
+					System.out.println("HEY I THINK I SHOULD DO SOMETHING!");
+					RawModel raw = Loader.loadToVAO(master.getMesh().positions, master.getMesh().uvs, master.getMesh().normals);
+					TexturedModel texModel = new TexturedModel(raw, MasterRenderer.currentTexturePack);
+					master.getEntity().setModel(texModel);
+					master.dirty = false;
+				}
+				
 				if(master.getEntity() != null) {
-					if(master.getMesh() != null && master.dirty) {
-						RawModel raw = Loader.loadToVAO(master.getMesh().positions, master.getMesh().uvs, master.getMesh().normals);
-						TexturedModel texModel = new TexturedModel(raw, MasterRenderer.currentTexturePack);
-						master.getEntity().setModel(texModel);
-						master.dirty = false;
-					}
-					
 					MasterRenderer.getInstance().addChunkEntity(master.getEntity());
-					
-				} else {
-					if(master.getMesh() != null && master.dirty) {
-						RawModel raw = Loader.loadToVAO(master.getMesh().positions, master.getMesh().uvs, master.getMesh().normals);
-						TexturedModel texModel = new TexturedModel(raw, MasterRenderer.currentTexturePack);
-						ChunkEntity entity = new ChunkEntity(texModel, master.getOrigin());
-						master.dirty = false;
-						master.setEntity(entity);
-					}
 				}
 			}
 		}
@@ -326,7 +319,7 @@ public class World {
 		for(Entity entity : entities) {
 			MasterRenderer.getInstance().addEntity(entity);
 		}
-		MasterRenderer.getInstance().render(camera);
+		MasterRenderer.getInstance().render(currentCamera);
 		particleEngine.render(Main.thePlayer, 1f);
 	}
 	public void tick() {
@@ -777,10 +770,12 @@ public class World {
 
 	public void saveWorld() {
 		//this.chunkCreator.interrupt();
+		try {
 		for(Map.Entry<ChunkCoordinates, MasterChunk> entry : chunkMap.entrySet()) {
 			MasterChunk master = entry.getValue();
 			provider.saveChunk(master);
 		}
+		} catch(Exception e) {}
 
 		saveLevel();
 	}
@@ -793,8 +788,24 @@ public class World {
 	public void quitWorld() {
 		if(this.chunkCreator != null) {
 			this.chunkCreator.interrupt();
+			try {
+				this.chunkCreator.stop();
+			} catch(Exception e) {
+				Logger.log(LogLevel.ERROR, "Tried to stop chunk creator but uh idk");
+			}
+			
 		}
-
+		
+		if(this.chunkMeshCreator != null) {
+			this.chunkMeshCreator.interrupt();
+			try {
+				this.chunkMeshCreator.stop();
+			} catch(Exception e) {
+				Logger.log(LogLevel.ERROR, "Tried to stop chunk mesh creator but uh idk");
+			}
+			
+		}
+		
 		Main.inGameGUI = null;
 		Main.thePlayer = null;
 		ChunkCoordHelper.cleanUp();

@@ -232,7 +232,6 @@ public class PlayerModel {
 		float yOffset = (float) y / 4f;
 		
 		int privIndex = new Integer(0);
-		System.out.println(privIndex);
 		uv[privIndex+0] = new Vector2f(xOffset, yOffset);
 		uv[privIndex+0].y = -uv[privIndex+0].y;
 		uv[privIndex+1] = new Vector2f((x + 1) / sizeOfAtlas, yOffset);

@@ -317,7 +317,6 @@ public class CubeModel {
 		float yOffset = (float) y / 16f;
 		
 		int privIndex = new Integer(index*6);
-		System.out.println(privIndex);
 		uv[privIndex+0] = new Vector2f(xOffset, yOffset);
 		uv[privIndex+0].y = -uv[privIndex+0].y;
 		uv[privIndex+1] = new Vector2f((x + 1) / sizeOfAtlas, yOffset);

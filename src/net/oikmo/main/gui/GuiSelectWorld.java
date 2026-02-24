@@ -31,8 +31,14 @@ public class GuiSelectWorld extends GuiScreen {
 	private GuiButton deleteButton;
 	private GuiButton backButton;
 	
+	private int ticksToWait = 0;
+	private int maxCoolDown = 30; //1s
+	private boolean lockTick = false;
+	
 	public void onInit() {
 		float offsetY = -(6*30)/2;
+		ticksToWait = 0;
+		lockTick = false;
 		
 		world1Button = new GuiButton(Display.getWidth()/2, (Display.getHeight()/2)-offsetY-150-5, 200, 30, Main.lang.translateKey("world.select.create"));
 		world1Button.setGuiCommand(new GuiCommand() {
@@ -46,8 +52,7 @@ public class GuiSelectWorld extends GuiScreen {
 						Main.currentScreen = new GuiCreateWorld(world);
 					} else {
 						Main.loadWorld(world);
-						Main.shouldTick();
-						Main.currentScreen = null;
+						//Main.shouldTick();
 					}
 				} else {
 					try {
@@ -77,8 +82,6 @@ public class GuiSelectWorld extends GuiScreen {
 						Main.currentScreen = new GuiCreateWorld(world);
 					} else {
 						Main.loadWorld(world);
-						Main.shouldTick();
-						Main.currentScreen = null;
 					}
 				} else {
 					try {
@@ -107,8 +110,6 @@ public class GuiSelectWorld extends GuiScreen {
 						Main.currentScreen = new GuiCreateWorld(world);
 					} else {
 						Main.loadWorld(world);
-						Main.shouldTick();
-						Main.currentScreen = null;
 					}
 				} else {
 					try {
@@ -138,7 +139,6 @@ public class GuiSelectWorld extends GuiScreen {
 					} else {
 						Main.loadWorld(world);
 						Main.shouldTick();
-						Main.currentScreen = null;
 					}
 				} else {
 					try {
@@ -168,8 +168,6 @@ public class GuiSelectWorld extends GuiScreen {
 						Main.currentScreen = new GuiCreateWorld(world);
 					} else {
 						Main.loadWorld(world);
-						Main.shouldTick();
-						Main.currentScreen = null;
 					}
 				} else {
 					try {
@@ -273,11 +271,8 @@ public class GuiSelectWorld extends GuiScreen {
 		}
 	}
 	
-	private int ticksToWait = 0;
-	private int maxCoolDown = 60; //1s
-	private boolean lockTick = false;
-	public void onUpdate() {
-		drawTiledBackground(ResourceLoader.loadUITexture("dirtTex"), 48);
+	
+	public void onTick() {
 		if(ticksToWait < maxCoolDown) {
 			ticksToWait++;
 		}
@@ -285,6 +280,11 @@ public class GuiSelectWorld extends GuiScreen {
 		if(!lockTick && ticksToWait >= maxCoolDown) {
 			lockTick = true;
 		}
+	}
+	
+	public void onUpdate() {
+		drawTiledBackground(ResourceLoader.loadUITexture("dirtTex"), 48);
+		
 		world1Button.tick(lockTick);
 		world2Button.tick(lockTick);
 		world3Button.tick(lockTick);

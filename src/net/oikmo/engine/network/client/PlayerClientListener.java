@@ -291,11 +291,14 @@ public class PlayerClientListener extends Listener {
 		}
 		else if(object instanceof PacketWorldJoin) {
 			PacketWorldJoin packet = (PacketWorldJoin) object;
+			
 			theWorld = new World(packet.seed);
 			Main.theWorld = theWorld;
+			
 			if(Main.thePlayer == null) {
 				Main.thePlayer = new Player(new Vector3f(0,120,0),new Vector3f(0,0,0));
 			}
+			
 			Main.thePlayer.setPos(packet.x,packet.y,packet.z);
 			
 			Main.thePlayer.getCamera().setRotation(packet.rotX, packet.rotY, packet.rotZ);
