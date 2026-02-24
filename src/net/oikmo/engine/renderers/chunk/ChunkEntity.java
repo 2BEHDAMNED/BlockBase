@@ -21,4 +21,8 @@ public class ChunkEntity {
 	public TexturedModel getModel() {
 		return model;
 	}
+
+	public void setModel(TexturedModel model) {
+		this.model = model;
+	}
 }
