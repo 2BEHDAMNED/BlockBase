@@ -203,6 +203,7 @@ public class World {
 	}
 	
 	public Thread startChunkMeshHandler() {
+		System.out.println("STARTING CHUNK MESH CREATOR");
 		return new Thread(new Runnable() {
 			public void run() {
 				while(!Main.displayRequest) {
@@ -210,7 +211,7 @@ public class World {
 						for (int x = -RENDER_SIZE; x < RENDER_SIZE; x++) {
 							for (int z = -RENDER_SIZE; z < RENDER_SIZE; z++) {
 								if(FastMath.abs(x) + FastMath.abs(z) > RENDER_SIZE) continue;
-								if(Main.thePlayer == null) { continue; }
+								//if(Main.thePlayer == null) { continue; }
 								if(Main.thePlayer.getCurrentChunkPosition() != null) {
 									ChunkCoordinates playerChunk = Main.thePlayer.getCurrentChunkPosition();
 									ChunkCoordinates chunkPos = ChunkCoordHelper.create((int)(playerChunk.x + (x*16)), (int)(playerChunk.z + (z*16)));
@@ -235,13 +236,13 @@ public class World {
 															master.destroyMesh();
 													}
 												} 
-											}
-	
-											if(master != null) {
+												
 												if(!currentMasterChunks.contains(master)) {
 													currentMasterChunks.add(master);
 												}
 											}
+										} else {
+											System.out.println("im nulling it");
 										}
 									}	
 								}
@@ -256,9 +257,12 @@ public class World {
 	public void update() {
 		if(Main.thePlayer != null && this.currentCamera == null) {
 			this.currentCamera = Main.thePlayer.getCamera();
-		} else {
+		}
+		
+		if(this.currentCamera == null) {
 			return;
 		}
+		
 		if(!chunkMap.isEmpty()) {		
 			if(Main.theNetwork != null) {
 				try {
@@ -296,26 +300,28 @@ public class World {
 							}
 						}
 					}
-				} catch(java.util.ConcurrentModificationException e) {}
+				} catch(Exception e) {}
 			}
 		}
-
-		synchronized(currentMasterChunks) {
-			for(MasterChunk master : currentMasterChunks) {
-				if((master.getMesh() != null && master.dirty) || (master.getMesh() != null && master.getEntity().getModel() == null)) {
-					System.out.println("HEY I THINK I SHOULD DO SOMETHING!");
+		
+		try {
+		for(MasterChunk master : currentMasterChunks) {
+			if(master.dirty) {
+				System.out.println(master.getEntity().getModel());
+				if(master.getMesh() != null && master.getEntity().getModel() == null) {
 					RawModel raw = Loader.loadToVAO(master.getMesh().positions, master.getMesh().uvs, master.getMesh().normals);
 					TexturedModel texModel = new TexturedModel(raw, MasterRenderer.currentTexturePack);
 					master.getEntity().setModel(texModel);
 					master.dirty = false;
 				}
 				
-				if(master.getEntity() != null) {
-					MasterRenderer.getInstance().addChunkEntity(master.getEntity());
-				}
+			}
+			
+			if(master.getEntity() != null) {
+				MasterRenderer.getInstance().addChunkEntity(master.getEntity());
 			}
 		}
-
+		} catch(java.util.ConcurrentModificationException e) { }
 		for(Entity entity : entities) {
 			MasterRenderer.getInstance().addEntity(entity);
 		}

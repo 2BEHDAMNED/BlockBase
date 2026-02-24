@@ -27,7 +27,7 @@ public class MasterChunk {
 	public static final int localMaxTime = 60*(30);
 	public int timer = networkMaxTime;
 	
-	public boolean dirtys = true;
+	public boolean dirty = true;
 	
 	public MasterChunk(OpenSimplexNoise noiseGen, ChunkCoordinates origin) {
 		this.origin = origin;
