@@ -4,8 +4,8 @@ import org.lwjgl.util.vector.Vector3f;
 
 import com.mojang.minecraft.Tesselator;
 
-import net.oikmo.engine.entity.Entity;
-import net.oikmo.engine.world.blocks.Block;
+import net.grace.engine.entity.Entity;
+import net.grace.engine.world.blocks.Block;
 
 public class Particle extends Entity {
 	private float xd;

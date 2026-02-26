@@ -1,0 +1,573 @@
+package net.grace.main;
+
+import java.awt.Canvas;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Random;
+import java.util.Set;
+
+import javax.swing.ImageIcon;
+
+import org.lwjgl.opengl.Display;
+import org.lwjgl.util.vector.Vector3f;
+import org.newdawn.slick.Image;
+import org.newdawn.slick.ImageBuffer;
+
+import com.mojang.minecraft.Timer;
+
+import net.grace.engine.DisplayManager;
+import net.grace.engine.InputManager;
+import net.grace.engine.ResourceLoader;
+import net.grace.engine.entity.Entity;
+import net.grace.engine.entity.Player;
+import net.grace.engine.gui.GuiScreen;
+import net.grace.engine.models.CubeModel;
+import net.grace.engine.models.PlayerModel;
+import net.grace.engine.models.TexturedModel;
+import net.grace.engine.network.OtherPlayer;
+import net.grace.engine.network.client.NetworkHandler;
+import net.grace.engine.renderers.MasterRenderer;
+import net.grace.engine.sound.SoundMaster;
+import net.grace.engine.world.World;
+import net.grace.engine.world.blocks.Block;
+import net.grace.engine.world.chunk.coordinate.ChunkCoordHelper;
+import net.grace.main.gui.GuiComponentLoader;
+import net.grace.main.gui.GuiConnecting;
+import net.grace.main.gui.GuiDisconnected;
+import net.grace.main.gui.GuiInGame;
+import net.grace.main.gui.GuiLoading;
+import net.grace.main.gui.GuiMainMenu;
+import net.grace.toolbox.Logger;
+import net.grace.toolbox.Logger.LogLevel;
+import net.grace.toolbox.error.PanelCrashReport;
+import net.grace.toolbox.error.UnexpectedThrowable;
+import net.grace.toolbox.os.EnumOS;
+import net.grace.toolbox.os.EnumOSMappingHelper;
+import net.grace.toolbox.properties.LanguageHandler;
+import net.grace.toolbox.properties.OptionsHandler;
+
+/**
+ * Main class. Starts the engine, handles logic.
+ * @author Oikmo
+ */
+public class Main {
+	
+	/**  this specifies the version of the resource pulled from oikmo.github.io */
+	public static final int resourceVersion = 5;
+	/**  set as "BlockBase" used for UIs and windows */
+	public static final String gameName = "BlockBase";
+	/** used in the form of "xN.N" with x being type of version, a = alpha, b = beta and N.N being the version e.g 0.1.2 or 1.2.6 */
+	public static final String version = "a0.2.0 [4] [DEV]";
+	/** a combination of both gameName and version */
+	public static final String gameVersion = gameName + " " + version;
+	
+	/** this is used to control threads (in World class etc), false = window has not been requested to close, true... you get the idea. */
+	public static boolean displayRequest = false;
+	/** width of window, default 854 */
+	public static int WIDTH = 854;
+	/** height of window, default 480 */
+	public static int HEIGHT = 480;												
+	
+	/** this is the window that stores the Game Display and Error Log */
+	public static Frame frame;
+	/** where the game window actually draws to in the frame */
+	public static Canvas gameCanvas;
+	/** this is to PROPERLY close the game and prevent error logs. True when frame is being closed. */
+	private static boolean realClose = false;
+	
+	/** The error log window. Used to store logs and not close the game :P */
+	private static PanelCrashReport report;
+	/** a check to prevent multiple windows at once */
+	private static boolean hasErrored = false;
+	
+	public static GuiInGame inGameGUI;
+	public static GuiScreen currentScreen;
+	
+	public static World theWorld;
+	public static Player thePlayer;
+
+	public static float elapsedTime = 0;
+
+	public static Vector3f camPos = new Vector3f(0,0,0);
+
+	public static boolean shouldTick = true;
+	private static boolean tick;
+	
+	public static String[] splashes;
+	public static String splashText;
+
+	public static NetworkHandler theNetwork;
+	public static String playerName = null;
+	public static ImageBuffer playerSkinBuffer;
+	public static int playerSkin;
+	public static boolean disableNetworking = true;
+
+	public static boolean jmode = false;
+	
+	public static LanguageHandler lang = LanguageHandler.getInstance();
+	public static InputManager im;
+	
+	private static boolean hasSaved = false;
+	
+	/**
+	 * Basically, it creates the resources folder if they don't exist,<br>
+	 * then it creates the window and checks whether or not the last<br>
+	 * recorded resource version is equal to the current version. If<br>
+	 * not then attempt to download the required resources and update<br>
+	 * the version. Then it enters the game loop in which that handles<br>
+	 * logic and rendering.
+	 * @param args
+	 * @throws IOException 
+	 */
+	public static void main(String[] args) throws IOException {
+		String password = null;
+		for(String arg : args) {
+			if(arg.startsWith("u=")) {
+				try {
+					playerName = arg.split("=")[1];
+				} catch(ArrayIndexOutOfBoundsException e) {}
+			} else if(arg.startsWith("p=")) { 
+				try {
+					password = arg.split("=")[1];
+				} catch(ArrayIndexOutOfBoundsException e) {}
+			} else if(arg.startsWith("w=")) {
+				try {
+					WIDTH = Integer.parseInt(arg.split("=")[1]);
+				} catch(NumberFormatException | ArrayIndexOutOfBoundsException e) {}
+				
+			} else if(arg.startsWith("h=")) {
+				try {
+					HEIGHT = Integer.parseInt(arg.split("=")[1]);
+				} catch(NumberFormatException | ArrayIndexOutOfBoundsException e) {}
+			}
+		}
+		
+		Thread.currentThread().setName("Main Thread");
+		removeHSPIDERR();
+		Timer timer = new Timer(60f);
+
+		try {
+			if(!new File(getWorkingDirectory()+"/resources/custom").exists()) {
+				new File(getWorkingDirectory()+"/resources/custom").mkdirs();
+			}
+
+			if(!new File(getWorkingDirectory()+"/options.txt").exists()) {
+				new File(getWorkingDirectory()+"/options.txt").createNewFile();
+				OptionsHandler.getInstance().insertKey("graphics.distance", 2+"");
+				OptionsHandler.getInstance().insertKey("graphics.fov", 70+"");
+				OptionsHandler.getInstance().insertKey("graphics.vsync", Boolean.toString(true));
+				OptionsHandler.getInstance().insertKey("audio.volume", GameSettings.globalVolume+"");
+				OptionsHandler.getInstance().insertKey("input.sensitivity", GameSettings.sensitivity+"");
+			}
+
+			frame = new Frame(Main.gameName);
+			frame.setFocusable(true);
+			frame.addWindowListener(new WindowAdapter() {
+				public void windowClosing(WindowEvent e) {
+					realClose = true;
+					if(!DisplayManager.activeDisplay) {
+						Logger.saveLog();
+						System.exit(0);
+					}
+				}
+			});
+
+			gameCanvas = new Canvas();
+			URL iconURL = Main.class.getResource("/assets/iconx32.png");
+			ImageIcon icon = new ImageIcon(iconURL);
+			frame.setIconImage(icon.getImage());
+			frame.add(gameCanvas, "Center");
+			gameCanvas.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+			frame.pack();
+			frame.setLocationRelativeTo((Component)null);
+			frame.setVisible(true);
+			
+			Logger.log(LogLevel.INFO, "Psst! I see you in the console! You can add your own custom resources to the game via the .blockbase/resources/custom folder!");
+			DisplayManager.createDisplay(frame, gameCanvas);
+			System.out.println("Setting vsync");
+			Display.setVSyncEnabled(true);
+			Main.shouldTick = false; 
+			System.out.println("Loading sounds");
+			SoundMaster.init();
+			
+			System.out.println("Loading component loader");
+			
+			currentScreen = new GuiComponentLoader(password);
+			
+			disableNetworking = false;
+			
+			//disableNetworking = false;
+			PlayerModel.setup();
+			Entity test = new Entity(new TexturedModel(PlayerModel.getRawModel(), ResourceLoader.loadTexture("textures/default_skin")), new Vector3f(0,-2, 0), new Vector3f(180,0,0), 1f);
+			test.setRotation(90, 90, 0);
+			/*Main.shouldTick = true;
+			Main.loadWorld("world1");*/
+			
+			Display.setVSyncEnabled(Boolean.parseBoolean(OptionsHandler.getInstance().translateKey("graphics.vsync")));
+
+			while(!Display.isCloseRequested() && !realClose) {
+				disableNetworking = false;
+				timer.updateTimer();				
+
+				//System.out.println(theWorld);
+				
+				if(thePlayer != null) {
+					Main.thePlayer.updateCamera();
+					if(Main.thePlayer.getCamera().isPerspective()) {
+						MasterRenderer.getInstance().addEntity(Main.thePlayer);
+					}
+				} else {
+					MasterRenderer.getInstance().addEntity(test);
+				}
+				
+				if(Main.currentScreen instanceof GuiComponentLoader) {
+					if(((GuiComponentLoader)Main.currentScreen).isDone) {
+						if(playerSkinBuffer != null) {
+							Image skin = new Image(playerSkinBuffer);
+							skin.setFilter(Image.FILTER_NEAREST);
+							Main.playerSkin = skin.getTexture().getTextureID();
+						
+						} else {
+							Main.playerSkin = ResourceLoader.loadTexture("textures/help_skin");
+						}
+					}
+				}
+				
+				for(int e = 0; e < timer.elapsedTicks; ++e) {
+					elapsedTime += 0.1f;
+
+					
+					if(inGameGUI != null && theWorld != null) {
+						SoundMaster.playRandomMusicIfReady();
+					}
+					
+					if(Main.currentScreen != null) {
+						Main.currentScreen.onTick();
+					}
+
+					if(theNetwork != null && thePlayer != null) {
+						theNetwork.tick();
+					}
+
+					if(shouldTick) {
+						tick();
+					}
+				}
+
+				if(theNetwork != null) {
+					for(OtherPlayer p : Main.theNetwork.players.values()) {
+						Vector3f position = new Vector3f(p.x,p.y,p.z);
+						Vector3f rotation = new Vector3f(p.rotZ,-p.rotY+90,p.rotX);
+						
+						if(p.userName != null ) {
+							if(p.model != null) {
+								if(p.buffer != null && p.model.getTexture().getTextureID() == ResourceLoader.loadTexture("textures/help_skin")) {
+									Image skinTex = new Image(p.buffer);
+									skinTex.setFilter(Image.FILTER_NEAREST);
+									p.model = new TexturedModel(PlayerModel.getRawModel(), skinTex.getTexture().getTextureID());
+								}
+								Entity entity = new Entity(p.model, position, rotation, 1f);
+								if(p.block != -1) {
+									Vector3f pos = new Vector3f(position);
+									pos.y += 0.85f;
+									Entity block = new Entity(new TexturedModel(CubeModel.getRawModel(Block.getBlockFromOrdinal(p.block)), MasterRenderer.currentTexturePack), pos, new Vector3f(p.rotZ,-p.rotY,0), 0.4f);
+									MasterRenderer.getInstance().addEntity(block);
+								}
+
+								MasterRenderer.getInstance().addEntity(entity);
+							} else {
+								if(p.buffer != null) {
+									Image skinTex = new Image(p.buffer);
+									skinTex.setFilter(Image.FILTER_NEAREST);
+									p.model = new TexturedModel(PlayerModel.getRawModel(), skinTex.getTexture().getTextureID());
+								} else {
+									p.model = new TexturedModel(PlayerModel.getRawModel(), ResourceLoader.loadTexture("textures/help_skin"));	
+								}
+							}
+						}
+						
+						
+					}
+				}
+
+				if(theWorld != null && thePlayer != null) {
+					if(!(Main.currentScreen instanceof GuiConnecting) && !(Main.currentScreen instanceof GuiDisconnected) && !Main.thePlayer.tick && Main.theNetwork != null) {
+						Main.currentScreen = new GuiConnecting();
+					}
+					if(thePlayer != null) {
+						if(thePlayer.getCamera() != null) {
+							SoundMaster.setListener(thePlayer.getCamera(), timer.renderPartialTicks);
+						}
+					}
+					theWorld.update();
+				}
+				
+				if(inGameGUI != null) {				
+					inGameGUI.update();
+				}
+
+				if(Main.currentScreen != null) {
+					Main.currentScreen.update();
+				}
+
+				if(im != null) {
+					im.handleInput();
+				}
+				
+				DisplayManager.updateDisplay(gameCanvas);				
+			}
+		} catch(Exception e) {
+			Main.error("Runtime Error!", e);
+		}
+
+		close();
+	}
+	
+	public static void reportThreads() {
+		Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+		for(Thread thread : threadSet) {
+			System.out.println(thread.getName());
+		}
+	}
+
+	/**
+	 * Disconnects the player from a server.
+	 * @param kick
+	 * @param message
+	 */
+	public static void disconnect(boolean kick, String message) {
+		Main.shouldTick = false;
+		if(Main.thePlayer != null) {
+			Main.thePlayer.getCamera().setMouseLock(false);
+		}
+
+		Main.thePlayer = null;
+		if(Main.theWorld != null) {
+			Main.theWorld.quitWorld();
+		}
+		Main.theWorld = null;
+		
+		ChunkCoordHelper.cleanUp();
+		if(Main.inGameGUI != null) {
+			Main.inGameGUI.prepareCleanUp();
+			Main.inGameGUI = null;
+		}
+		if(Main.theNetwork != null) {
+			Main.theNetwork.disconnect();
+			if(Main.theNetwork.players != null) {
+				Main.theNetwork.players.clear();
+			}
+		}
+
+		Main.theNetwork = null;
+		if(Main.currentScreen != null) {
+			Main.currentScreen.prepareCleanUp();
+		}
+		Main.currentScreen = new GuiDisconnected(kick, message);
+	}
+	
+	public static String getRandomSplash() {
+		return splashes[new Random().nextInt(splashes.length)];
+	}
+	
+	public static void loadWorld(String worldName) {
+		loadWorld(worldName, null, false);
+	}
+	
+	public static void loadWorld(String worldName, String seed, boolean superflat) {
+		
+		GuiMainMenu.stopMusic();
+		SoundMaster.stopMusic();
+
+		inGameGUI = new GuiInGame();
+		
+		currentScreen = new GuiLoading();
+		
+		if(seed != null) {
+			theWorld = new World(seed);
+		} else {
+			theWorld = new World();
+		}
+		
+		theWorld.superFlat = superflat;
+		theWorld.initLevelLoader(worldName);
+		theWorld.startChunkCreator();
+	}
+	
+	public static void shouldTick() {
+		if(Main.theNetwork == null) {
+			Main.shouldTick = !shouldTick;
+			tick = Main.shouldTick;
+		} else {
+			tick = !tick;
+		}
+
+		if(Main.thePlayer != null) {
+
+			Main.thePlayer.getCamera().setMouseLock(tick);
+		}	
+	}
+
+	public static boolean isPaused() {
+		return shouldTick == false;
+	}
+
+	/**
+	 * Every 1/60th this method is ran. This handles movement.
+	 */
+	private static void tick() {
+		if(Main.theNetwork == null) {
+			if(theWorld != null) {
+				theWorld.tick();
+			}
+			if(thePlayer != null) {
+				camPos = new Vector3f(thePlayer.getPosition());
+				if(!hasSaved && thePlayer.isOnGround()) {
+					theWorld.saveWorld();
+					hasSaved = true;
+				}
+			}
+		} else {
+			if(thePlayer != null) {
+				camPos = new Vector3f(thePlayer.getPosition());
+				if(theWorld != null) {
+					theWorld.tick();
+				}
+				theNetwork.update();	
+			}
+		}	
+	}
+
+	/**
+	 * Closes the game.
+	 */
+	public static void close() {
+		if(Main.theNetwork != null) {
+			Main.disconnect(false, "");
+		} else {
+			if(Main.theWorld != null) {
+				Main.theWorld.saveWorldAndQuit();
+			}
+		}
+		
+		OptionsHandler.getInstance().save();
+		Logger.saveLog();
+		displayRequest = true;
+		SoundMaster.cleanUp();
+		ResourceLoader.cleanUp();
+		DisplayManager.closeDisplay();
+
+		System.exit(0);
+	}
+
+	/**
+	 * Creates a frame with the error log embedded inside.
+	 * 
+	 * @param id (String)
+	 * @param throwable (Throwable)
+	 */
+	public static void error(String id, Throwable throwable) {
+		if(!hasErrored) {
+			if(theNetwork != null) {
+				theNetwork.disconnect();
+			}
+			
+			displayRequest = true;
+			Logger.saveLog();
+			DisplayManager.closeDisplay();
+			frame.removeAll();
+			frame.addWindowListener(new WindowAdapter(){  
+				public void windowClosing(WindowEvent e) {  
+					frame.dispose(); 
+					System.exit(0);
+				}  
+			});
+			frame.setTitle(Main.gameName + " Error!");
+			frame.setSize(WIDTH, HEIGHT);
+			frame.setVisible(true);
+			UnexpectedThrowable unexpectedThrowable = new UnexpectedThrowable(id, throwable);
+			if(report == null) {
+				report = new PanelCrashReport(unexpectedThrowable);
+			} else {
+				report.set(unexpectedThrowable);
+			}
+			frame.add(report, "Center");
+			frame.validate();
+
+			hasErrored = true;
+		}	
+	}
+
+	/** removes any HS_PID_ERR_XXX.log files found */
+	private static void removeHSPIDERR() {
+		File path = new File(".");
+		String[] files = path.list();
+		for(int i = 0; i < files.length; i++) {
+			if(files[i].contains("hs_err_pid")) {
+				File file = new File(path.getAbsoluteFile() + "\\" + files[i]);
+				file.delete();
+			}
+		}
+	}
+	
+	/**
+	 * Returns the resources directory
+	 * 
+	 * %appdata%/.blockbase/resources
+	 * @return
+	 */
+	public static File getResources() {
+		return new File(getWorkingDirectory()+"/resources");
+	}
+
+	/**
+	 * Retrieves data directory of .blockbase/ using {@code Main.getWorkingDirectory(String)}
+	 * @return Directory (File)
+	 */
+	public static File getWorkingDirectory() {
+		return getWorkingDirectory("blockbase");
+	}
+
+	/**
+	 * Uses {@link EnumOSMappingHelper} to locate an APPDATA directory in the system.
+	 * Then it creates a new directory based on the given name e.g <b>.name/</b>
+	 * 
+	 * @param name (String)
+	 * @return Directory (File)
+	 */
+	public static File getWorkingDirectory(String name) {
+		String userDir = System.getProperty("user.home", ".");
+		File folder;
+		switch(EnumOSMappingHelper.os[EnumOS.getOS().ordinal()]) {
+		case 1:
+		case 2:
+			folder = new File(userDir, '.' + name + '/');
+			break;
+		case 3:
+			String appdataLocation = System.getenv("APPDATA");
+			if(appdataLocation != null) {
+				folder = new File(appdataLocation, "." + name + '/');
+			} else {
+				folder = new File(userDir, '.' + name + '/');
+			}
+			break;
+		case 4:
+			folder = new File(userDir, "Library/Application Support/" + name);
+			break;
+		default:
+			folder = new File(userDir, name + '/');
+		}
+
+		if(!folder.exists() && !folder.mkdirs()) {
+			throw new RuntimeException("The working directory could not be created: " + folder);
+		} else {
+			return folder;
+		}
+	}
+}

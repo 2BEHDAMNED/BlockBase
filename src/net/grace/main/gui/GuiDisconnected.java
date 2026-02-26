@@ -1,0 +1,91 @@
+package net.grace.main.gui;
+
+import org.lwjgl.input.Mouse;
+import org.lwjgl.opengl.Display;
+
+import net.grace.engine.ResourceLoader;
+import net.grace.engine.gui.Gui;
+import net.grace.engine.gui.GuiScreen;
+import net.grace.engine.gui.component.slick.GuiCommand;
+import net.grace.engine.gui.component.slick.button.GuiButton;
+import net.grace.main.Main;
+
+public class GuiDisconnected extends GuiScreen {
+	
+	private String message;
+	private boolean kick;
+	
+	public GuiDisconnected(boolean kick, String message) {
+		super("Disconnected");
+		this.message = message;
+		this.kick = kick;
+	}
+	
+	private GuiButton quitButton;
+	
+	
+	public void onInit() {
+		if(Main.theNetwork != null) {
+			if(Main.thePlayer != null) {
+				Main.thePlayer.getCamera().setMouseLock(false);
+			}
+			
+		} else {
+			Main.shouldTick();
+		}
+		
+		quitButton = new GuiButton(Display.getWidth()/2, (Display.getHeight()/2)+40, 200, 30, Main.lang.translateKey("gui.quit"));
+		quitButton.setGuiCommand(new GuiCommand() {
+			@Override
+			public void invoke() {
+				prepareCleanUp();
+				Main.currentScreen = new GuiMainMenu(Main.getRandomSplash());
+			}
+			
+			@Override
+			public void update() {
+				x = Display.getWidth()/2;
+				y = (Display.getHeight()/2)+40;
+			}
+		});
+	}
+	
+	private int ticksToWait = 0;
+	private int maxCoolDown = 60;
+	private boolean lockTick = false;
+	public void onTick() {
+		if(ticksToWait < maxCoolDown) {
+			ticksToWait++;
+		}
+		
+		if(!lockTick && ticksToWait >= maxCoolDown) {
+			lockTick = true;
+		}
+	}
+	
+	public void onUpdate() {
+		if(Main.inGameGUI != null) {
+			Main.inGameGUI.prepareCleanUp();
+			Main.inGameGUI = null;
+			Main.disconnect(false, Main.lang.translateKey("network.disconnect.n"));
+			if(Main.thePlayer != null) {
+				Main.thePlayer.getCamera().setMouseLock(false);
+				Main.thePlayer = null;
+			} else {
+				if(Mouse.isGrabbed() != false) {
+					Mouse.setGrabbed(false);
+				}
+			}
+		}
+		
+
+		drawTiledBackground(ResourceLoader.loadUITexture("dirtTex"), 48);
+		drawShadowStringCentered(Display.getWidth()/2, (Display.getHeight()/2), (!kick ? Main.lang.translateKey("network.quit.d")+ message : Main.lang.translateKey("network.quit.k") + message));
+		quitButton.tick(lockTick);
+	}
+	
+	public void onClose() {
+		Gui.cleanUp();
+		quitButton.onCleanUp();
+	}
+}

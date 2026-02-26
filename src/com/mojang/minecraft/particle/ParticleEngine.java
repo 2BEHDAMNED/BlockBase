@@ -7,9 +7,9 @@ import org.lwjgl.opengl.GL11;
 
 import com.mojang.minecraft.Tesselator;
 
-import net.oikmo.engine.entity.Player;
-import net.oikmo.engine.renderers.MasterRenderer;
-import net.oikmo.toolbox.FastMath;
+import net.grace.engine.entity.Player;
+import net.grace.engine.renderers.MasterRenderer;
+import net.grace.toolbox.FastMath;
 
 public final class ParticleEngine {
 	public List<Particle> particles = new ArrayList<>();

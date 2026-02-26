@@ -1,0 +1,98 @@
+package net.grace.engine.renderers.entity;
+
+import java.util.List;
+import java.util.Map;
+
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL20;
+import org.lwjgl.opengl.GL30;
+import org.lwjgl.util.vector.Matrix4f;
+import org.lwjgl.util.vector.Vector3f;
+
+import net.grace.engine.entity.Camera;
+import net.grace.engine.entity.Entity;
+import net.grace.engine.entity.ItemBlock;
+import net.grace.engine.entity.ItemEntity;
+import net.grace.engine.entity.Player;
+import net.grace.engine.models.TexturedModel;
+import net.grace.engine.renderers.MasterRenderer;
+import net.grace.toolbox.Maths;
+
+public class EntityRenderer {
+	
+	private EntityShader shader;
+	public EntityRenderer(Matrix4f projectionMatrix, float r, float g, float b) {
+		shader = new EntityShader();
+		shader.start();
+		shader.loadProjectionMatrix(projectionMatrix);
+		shader.loadSkyColour(r, g, b);
+		shader.stop();
+	}
+	
+	public void render(Map<TexturedModel, List<Entity>> entities, Camera camera) {
+		synchronized(entities) {
+
+			for(TexturedModel model : entities.keySet()) {
+				if(model.getTexture().getTextureID() == MasterRenderer.invisibleTexture) { 
+					continue;
+				}
+				shader.start();
+				shader.loadViewMatrix(camera);
+				GL30.glBindVertexArray(model.getRawModel().getVaoID());
+				GL20.glEnableVertexAttribArray(0);
+				GL20.glEnableVertexAttribArray(1);
+				GL20.glEnableVertexAttribArray(2);
+				GL13.glActiveTexture(GL13.GL_TEXTURE0);
+				GL11.glBindTexture(GL11.GL_TEXTURE_2D, model.getTexture().getTextureID());
+				
+				List<Entity> batch = entities.get(model);
+				
+				for(int i = 0; i < batch.size(); i++) {
+					
+					Entity entity = batch.get(i);
+					
+					Vector3f position = entity.getPosition();
+					Vector3f rotation = entity.getRotation();
+					
+					if(entity instanceof Player) {
+						Vector3f playerModelPosition = ((Player)entity).getModelPosition();
+						if(playerModelPosition != null) {
+							position = playerModelPosition;
+						}
+						
+						Vector3f playerModelRotation = ((Player)entity).getModelRotation();
+						if(playerModelRotation != null) {
+							rotation = playerModelRotation;
+						}
+					}
+					
+					Matrix4f transformationMatrix = Maths.createTransformationMatrix(position, rotation, entity.getScale());
+					shader.loadTransformationMatrix(transformationMatrix);
+					shader.loadWhiteOffset(entity.getWhiteOffset()/10);
+					if(entity instanceof ItemEntity || entity instanceof ItemBlock) {
+						shader.loadFakeLighting(true);
+					} else {
+						shader.loadFakeLighting(false);
+					}
+					GL11.glDrawArrays(GL11.GL_TRIANGLES, 0, model.getRawModel().getVertexCount());
+					
+				}
+				
+				GL20.glDisableVertexAttribArray(0);
+				GL20.glDisableVertexAttribArray(1);
+				GL20.glDisableVertexAttribArray(2);
+				GL30.glBindVertexArray(0);
+				shader.stop();
+				
+			}
+		}
+	}
+
+	public void updateProjectionMatrix(Matrix4f projectionMatrix) {
+		shader.start();
+		shader.loadProjectionMatrix(projectionMatrix);
+		shader.stop();
+		
+	}
+}
